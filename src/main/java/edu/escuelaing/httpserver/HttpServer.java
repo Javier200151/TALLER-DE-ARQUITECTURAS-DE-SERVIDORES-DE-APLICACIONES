@@ -86,19 +86,22 @@ public class HttpServer {
                 break;
             }
         }
+        try {
+            String uriStr = request.get(0).split(" ")[1];
+            URI resourceURI = new URI(uriStr);
+            System.out.println("URI Path: "+ resourceURI.getPath());
+            System.out.println("URI query: "+ resourceURI.getQuery());
 
-        String uriStr = request.get(0).split(" ")[1];
-        URI resourceURI = new URI(uriStr);
-        System.out.println("URI Path: "+ resourceURI.getPath());
-        System.out.println("URI query: "+ resourceURI.getQuery());
-
-        if(resourceURI.toString().startsWith("/appuser")){
-            outputLine = getComponentResource(resourceURI);
-            out.println(outputLine);
-        }else{
-            outputLine = getHTMLResource(resourceURI);
-            out.println(outputLine);
-        } 
+            if(resourceURI.toString().startsWith("/appuser")){
+                outputLine = getComponentResource(resourceURI);
+                out.println(outputLine);
+            }else{
+                outputLine = getHTMLResource(resourceURI);
+                out.println(outputLine);
+            }
+        }catch(Exception e){
+            System.out.println(e);
+        }
 
         out.close();
         in.close();
