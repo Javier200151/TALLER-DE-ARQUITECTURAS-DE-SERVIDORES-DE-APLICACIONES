@@ -42,7 +42,7 @@ public class HttpServer {
             System.err.println("Could not listen on port: "+PORT);
             System.exit(1);
         }
-
+        searchForComponents();
         boolean running = true;
         while (running) {
             Socket clientSocket = null;
@@ -57,6 +57,20 @@ public class HttpServer {
         }
         serverSocket.close();
     }
+
+    private void searchForComponents() {
+
+    }
+/*
+    private void loadServices(Class c) {
+            for( Method m: c.getDeclaredMethods()){
+                if(m.isAnnotationPresent(Service.class)){
+                    String uri =  m.getAnnotation(Service.class).uri();
+                    services.put(uri, m);
+                }
+            }
+            
+    }*/
 
     public void manageConnection(Socket clientSocket) throws IOException, URISyntaxException{
         PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
