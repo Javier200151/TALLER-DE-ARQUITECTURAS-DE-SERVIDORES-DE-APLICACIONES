@@ -3,6 +3,10 @@ package edu.escuelaing.httpserver;
 import java.net.*;
 import java.nio.charset.Charset;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -10,6 +14,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import javax.imageio.ImageIO;
+
+import java.io.OutputStream;
 
 import edu.escuelaing.springplus.Service;
 
@@ -27,10 +35,23 @@ import java.lang.reflect.Method;
 public class HttpServer {
     public static final Integer PORT = getPort();
     private static final HttpServer _instance = new HttpServer();
+    private static final HashMap<String,String> contentType = new HashMap<String,String>();
+    private static final String ROOT_PATH = "edu.escuelaing.webapp.";
+
+    private HashMap<String, Method> services =  new HashMap<>();
 
     private HttpServer(){ }
 
-    public static HttpServer getInstance() {
+    
+    public static HttpServer getInstance(){
+        contentType.put("html","text/html");
+        contentType.put("css","text/css");
+		contentType.put("js","text/javascript");
+
+		contentType.put("jpeg","image/jpeg");
+		contentType.put("jpg","image/jpg");
+		contentType.put("png","image/png");
+		contentType.put("ico","image/vnd.microsoft.icon");
         return _instance;
     }
 
@@ -42,7 +63,6 @@ public class HttpServer {
             System.err.println("Could not listen on port: "+getPort());
             System.exit(1);
         }
-        searchForComponents();
         boolean running = true;
         while (running) {
             Socket clientSocket = null;
@@ -58,10 +78,6 @@ public class HttpServer {
         serverSocket.close();
     }
 
-    private void searchForComponents() {
-
-    }
-/*
     private void loadServices(Class c) {
             for( Method m: c.getDeclaredMethods()){
                 if(m.isAnnotationPresent(Service.class)){
@@ -70,22 +86,28 @@ public class HttpServer {
                 }
             }
             
-    }*/
+    }
 
     public void manageConnection(Socket clientSocket) throws IOException, URISyntaxException{
-        PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+
+        OutputStream outStream=clientSocket.getOutputStream();
+		PrintWriter out = new PrintWriter(outStream, true);
         BufferedReader in = new BufferedReader(
-            new InputStreamReader(
-                clientSocket.getInputStream()));
+                new InputStreamReader(
+                        clientSocket.getInputStream()));
         String inputLine, outputLine;
-        ArrayList<String> request = new ArrayList<String>();
-        while ((inputLine = in.readLine()) != null){
-            System.out.println("Mensaje recibido desde el cliente:"+ inputLine);
+        ArrayList<String> request = new ArrayList<>();
+        String sv="";
+        
+
+        while ((inputLine = in.readLine()) != null) {
+            System.out.println("Received: " + inputLine);
             request.add(inputLine);
-            if(!in.ready()){
+            if (!in.ready()) {
                 break;
             }
         }
+
         try {
             String uriStr = request.get(0).split(" ")[1];
             URI resourceURI = new URI(uriStr);
@@ -95,6 +117,8 @@ public class HttpServer {
             if(resourceURI.toString().startsWith("/appuser")){
                 outputLine = getComponentResource(resourceURI);
                 out.println(outputLine);
+            }else if(resourceURI.toString().contains("jpg") || resourceURI.toString().contains("jpeg")){
+                outputLine = computeImageResponse(resourceURI.getPath().split("/")[1], outStream);
             }else{
                 outputLine = getHTMLResource(resourceURI);
                 out.println(outputLine);
@@ -112,16 +136,17 @@ public class HttpServer {
         String response = default404HTMLResponse();
         try{
             String classPath = resourceURI.getPath().toString().replaceAll("/appuser/","");
-            Class component = Class.forName(classPath);
+            String className = classPath.substring(0, classPath.indexOf("/"));
+            Class component = Class.forName(ROOT_PATH + className);
             for (Method m : component.getDeclaredMethods()){
                 if(m.isAnnotationPresent(Service.class)){
+                    loadServices(component);
                     response = m.invoke(null).toString();
                     response = "HTTP/1.1 200 OK\r\n"
                     + "Content-Type: text/html\r\n"
                     + "\r\n" + response;
                 }
-            }
-            
+            }   
         } catch(ClassNotFoundException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex){
             Logger.getLogger(HttpServer.class.getName()).log(Level.SEVERE, null, ex);
             response = default404HTMLResponse();
@@ -148,6 +173,32 @@ public class HttpServer {
             response=default404HTMLResponse();
         }
         return response;
+    }
+
+    public String computeImageResponse(String uriImgType, OutputStream outStream){
+        uriImgType=uriImgType.replace("/img","");
+        
+        String extensionUri = uriImgType.substring(uriImgType.lastIndexOf(".") + 1);
+
+        String content = "HTTP/1.1 200 OK \r\n" 
+                            + "Content-Type: "+ contentType.get(extensionUri) + "\r\n"
+                            + "\r\n";
+        System.out.println("uriImgType " + uriImgType);
+        File file = new File("src/main/resources/public/img/"+uriImgType);
+        System.out.println("file "+file);
+        try {
+            BufferedImage bi = ImageIO.read(file);
+            ByteArrayOutputStream byteArrayOutputStream=new ByteArrayOutputStream();
+            DataOutputStream dataOutputStream= new DataOutputStream(outStream); 
+            ImageIO.write(bi, extensionUri, byteArrayOutputStream);
+            dataOutputStream.writeBytes(content);
+            dataOutputStream.write(byteArrayOutputStream.toByteArray());
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return content;
     }
 
     public String default404HTMLResponse(){
