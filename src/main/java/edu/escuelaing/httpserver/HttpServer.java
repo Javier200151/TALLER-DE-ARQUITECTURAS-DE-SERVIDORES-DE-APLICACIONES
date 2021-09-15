@@ -82,6 +82,7 @@ public class HttpServer {
             for( Method m: c.getDeclaredMethods()){
                 if(m.isAnnotationPresent(Service.class)){
                     String uri =  m.getAnnotation(Service.class).uri();
+                    System.out.println("uri "+uri);
                     services.put(uri, m);
                 }
             }
@@ -115,7 +116,7 @@ public class HttpServer {
             System.out.println("URI query: "+ resourceURI.getQuery());
 
             if(resourceURI.toString().startsWith("/appuser")){
-                outputLine = getComponentResource(resourceURI);
+                outputLine = getComponentResource(outStream, resourceURI);
                 out.println(outputLine);
             }else if(resourceURI.toString().contains("jpg") || resourceURI.toString().contains("jpeg")){
                 outputLine = computeImageResponse(resourceURI.getPath().split("/")[1], outStream);
@@ -132,22 +133,40 @@ public class HttpServer {
         clientSocket.close();
     }
 
-    private String getComponentResource(URI resourceURI) {
+    private String getComponentResource(OutputStream outStream, URI resourceURI) {
         String response = default404HTMLResponse();
         try{
+            
             String classPath = resourceURI.getPath().toString().replaceAll("/appuser/","");
-            String className = classPath.substring(0, classPath.indexOf("/"));
-            Class component = Class.forName(ROOT_PATH + className);
+            System.out.println("classPath "+ classPath);
+            String content = "HTTP/1.1 200 OK\r\n"
+                        + "Content-Type: text/html\r\n"
+                        + "\r\n" 
+                        + "<!DOCTYPE html>"
+                        + "<html>"
+                        +       "<head>"
+                        +           "<title>" + classPath +"</title>\n"
+                        +           "<meta charset=\"UTF-8\">"
+                        +           "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.8\">"
+                        +           "<style type='text/css'>"
+                        +               "h1{"
+                        +                   "font-size: 150px;"
+                        +                   "text-align: center;"
+                        +           "</style>"
+                        +       "</head>"
+                        +       "<body>"
+                        +           "<h1> %s </h1>"
+                        +       "</body>"
+                        + "</html>";
+            Class component = Class.forName(ROOT_PATH + classPath);
             for (Method m : component.getDeclaredMethods()){
                 if(m.isAnnotationPresent(Service.class)){
                     loadServices(component);
-                    response = m.invoke(null).toString();
-                    response = "HTTP/1.1 200 OK\r\n"
-                    + "Content-Type: text/html\r\n"
-                    + "\r\n" + response;
+                    response = String.format(content, services.get(component.getName() + "." + classPath).invoke(null).toString());
+                    outStream.write(content.getBytes());
                 }
             }   
-        } catch(ClassNotFoundException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex){
+        } catch(ClassNotFoundException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | IOException ex){
             Logger.getLogger(HttpServer.class.getName()).log(Level.SEVERE, null, ex);
             response = default404HTMLResponse();
         }
