@@ -25,7 +25,7 @@ import java.lang.reflect.Method;
  * @author JavierELopez
  */
 public class HttpServer {
-    public static final Integer PORT = 35000;
+    public static final Integer PORT = getPort();
     private static final HttpServer _instance = new HttpServer();
 
     private HttpServer(){ }
@@ -37,9 +37,9 @@ public class HttpServer {
     public void startServer(String[] args) throws IOException, URISyntaxException {
         ServerSocket serverSocket = null;
         try{
-            serverSocket = new ServerSocket(PORT);
+            serverSocket = new ServerSocket(getPort());
         }catch(IOException e){
-            System.err.println("Could not listen on port: "+PORT);
+            System.err.println("Could not listen on port: "+getPort());
             System.exit(1);
         }
         searchForComponents();
@@ -47,7 +47,7 @@ public class HttpServer {
         while (running) {
             Socket clientSocket = null;
             try{
-                System.out.println("Listo para recibir en el puerto: "+PORT);
+                System.out.println("Listo para recibir en el puerto: "+getPort());
                 clientSocket = serverSocket.accept();
             }catch (IOException e){
                 System.err.println("Accept Failed.");
@@ -183,6 +183,13 @@ public class HttpServer {
                 + "         <img src=\"https://labyes.com/feline/wp-content/uploads/2020/08/28Jul_LabyesNotaWeb1_2-1920x1283.jpg.webp\""  
                 + "</html>";
         return outputLine;
+    }
+
+    static int getPort() {
+        if (System.getenv("PORT") != null) {
+            return Integer.parseInt(System.getenv("PORT"));
+        }
+        return 35000; //returns default port if heroku-port isn't set (i.e. on localhost)
     }
 
     public static void main(String... args){
