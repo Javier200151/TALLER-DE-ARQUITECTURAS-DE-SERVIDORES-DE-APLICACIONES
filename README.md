@@ -28,7 +28,7 @@ Esta aplicación se encuentra desplegada en Heroku, por esta razón para poder p
 
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://servidoresarep.herokuapp.com/appuser/Cuadrado?5)
 
-- /appuser/Cuadrado?5/Cubo?5 no funcional
+- /appuser/Cubo?5 no funcional
 - /appuser/Cuadrado?5 funcional
 
 
