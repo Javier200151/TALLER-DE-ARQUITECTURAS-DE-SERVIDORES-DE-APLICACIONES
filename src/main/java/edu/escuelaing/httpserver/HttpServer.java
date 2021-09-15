@@ -116,7 +116,7 @@ public class HttpServer {
             System.out.println("URI query: "+ resourceURI.getQuery());
 
             if(resourceURI.toString().startsWith("/appuser")){
-                outputLine = getComponentResource(outStream, resourceURI);
+                outputLine = getComponentResource(resourceURI);
                 out.println(outputLine);
             }else if(resourceURI.toString().contains("jpg") || resourceURI.toString().contains("jpeg")){
                 outputLine = computeImageResponse(resourceURI.getPath().split("/")[1], outStream);
@@ -133,7 +133,7 @@ public class HttpServer {
         clientSocket.close();
     }
 
-    private String getComponentResource(OutputStream outStream, URI resourceURI) {
+    private String getComponentResource(URI resourceURI) {
         String response = default404HTMLResponse();
         try{
             
@@ -162,11 +162,14 @@ public class HttpServer {
             for (Method m : component.getDeclaredMethods()){
                 if(m.isAnnotationPresent(Service.class)){
                     loadServices(component);
-                    response = String.format(content, services.get(component.getName() + "." + classPath).invoke(null).toString());
-                    outStream.write(content.getBytes());
+                    //response = String.format(content, services.get(component.getName() + "." + classPath).invoke(null).toString());
+                    response = m.invoke(null).toString();
+                    response = "HTTP/1.1 200 OK\r\n"
+                    + "Content-Type: text/html\r\n"
+                    + "\r\n" + response;
                 }
             }   
-        } catch(ClassNotFoundException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | IOException ex){
+        } catch(ClassNotFoundException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex){
             Logger.getLogger(HttpServer.class.getName()).log(Level.SEVERE, null, ex);
             response = default404HTMLResponse();
         }
