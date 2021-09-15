@@ -1,1 +1,1 @@
-web: java $JAVA_OPTS -cp target/classes:target/dependency/* edu.escuelaing.webapp.AppStarter -Dserver.port=$PORT
+web: java $JAVA_OPTS -cp target/classes:target/dependency/* edu.escuelaing.webapp.AppStarter
